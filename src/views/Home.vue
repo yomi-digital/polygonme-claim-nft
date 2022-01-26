@@ -51,7 +51,7 @@
               </div>
             </div>
             <div class="col-12">
-              <button class="btn mt-4" type="submit" @click="nextStep">
+              <button class="btn mt-4" type="submit" @click="nextStep()">
                 Request Code
               </button>
             </div>
@@ -72,14 +72,14 @@
               <div class="invalid-tooltip">Please provide a valid code.</div>
             </div>
             <div class="col-12">
-              <button class="btn mt-4" type="submit" @click="nextStep">
+              <button class="btn mt-4" type="submit" @click="nextStep()">
                 Confirm Code
               </button>
             </div>
           </form>
         </div>
         <div v-if="step === 3">
-          <button class="btn mt-4" type="submit" @click="nextStep">
+          <button class="btn mt-4" type="submit" @click="conncet()">
             <img src="../assets/img/metamask.png" width="30" alt="" /> Connect
             with Metamask
           </button>
@@ -118,9 +118,33 @@ export default {
         mumbai: 80001,
         ganache: 5777,
       },
-      abi: [],
-      network: "ethereum",
-      contract: "0x9Ec46a3dd227Fd5977C7F1997C043122a703FF2A",
+      abi: [
+        {
+          inputs: [
+            {
+              internalType: "address",
+              name: "_to",
+              type: "address",
+            },
+            {
+              internalType: "uint256",
+              name: "amount",
+              type: "uint256",
+            },
+            {
+              internalType: "string",
+              name: "plan",
+              type: "string",
+            },
+          ],
+          name: "mint",
+          outputs: [],
+          stateMutability: "payable",
+          type: "function",
+        },
+      ],
+      network: "rinkeby",
+      contract: "0xAF42B5dC41F736a167A5B27e3Fb953b89627032b",
       explorerUrl: "https://etherscan.io/tx/",
     };
   },
