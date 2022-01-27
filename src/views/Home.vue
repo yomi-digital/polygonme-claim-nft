@@ -29,7 +29,7 @@
           </div>
         </div>
         <div v-if="step === 1">
-          <form class="row needs-validation justify-content-center" required>
+          <div class="row needs-validation justify-content-center" required>
             <div class="col-md-4 position-relative">
               <label for="validationTooltipUsername" class="form-label"
                 >Insert your e-mail</label
@@ -45,44 +45,54 @@
                   class="form-control"
                   id="validationTooltipUsername"
                   aria-describedby="validationTooltipUsernamePrepend"
+                  v-model="email"
                   required
                 />
                 <div class="invalid-tooltip">Please insert a valid e-mail.</div>
               </div>
             </div>
             <div class="col-12">
-              <button class="btn mt-4" type="submit" @click="nextStep()">
+              <button
+                v-if="!isRequesting"
+                class="btn mt-4"
+                @click="checkUserNft()"
+              >
                 Request Code
               </button>
+              <span v-if="isRequesting">Requesting code please wait...</span>
             </div>
-          </form>
+          </div>
         </div>
         <div v-if="step === 2">
-          <form class="row needs-validation justify-content-center" required>
+          <div class="row needs-validation justify-content-center" required>
             <div class="col-md-4 position-relative">
               <label for="validationTooltip05" class="form-label"
-                >Insert the code that you received via mail</label
+                >Insert the code that you have received via mail</label
               >
               <input
                 type="text"
                 class="form-control"
                 id="validationTooltip05"
                 required
+                v-model="code"
               />
-              <div class="invalid-tooltip">Please provide a valid code.</div>
             </div>
             <div class="col-12">
-              <button class="btn mt-4" type="submit" @click="nextStep()">
-                Confirm Code
+              <button
+                v-if="!account"
+                class="btn mt-4"
+                @click="connectMetamask()"
+              >
+                Connect Wallet
+              </button>
+              <button v-if="account" class="btn mt-4" @click="signMessage()">
+                Sign Message
               </button>
             </div>
-          </form>
+          </div>
         </div>
         <div v-if="step === 3">
-          <button class="btn mt-4" type="submit" @click="conncet()">
-            <img src="../assets/img/metamask.png" width="30" alt="" /> Connect
-            with Metamask
-          </button>
+          <h3>Congratulation, you will receive your NFT soon!</h3>
         </div>
       </div>
     </section>
@@ -98,7 +108,7 @@
 import Web3 from "web3";
 import Web3Modal from "web3modal";
 import WalletConnectProvider from "@walletconnect/web3-provider";
-
+import axios from "axios";
 import Header from "@/components/Header.vue";
 
 export default {
@@ -109,8 +119,14 @@ export default {
   data() {
     return {
       step: 1,
+      email: "",
+      claim: "",
+      code: "",
       account: "",
+      existingCode: "",
+      isRequesting: false,
       web3: "",
+      waitingForCode: "",
       networks: {
         ethereum: 1,
         rinkeby: 4,
@@ -153,7 +169,7 @@ export default {
       const app = this;
       app.step = app.step + 1;
     },
-    async connect() {
+    async connectMetamask() {
       const app = this;
       const providerOptions = {
         walletconnect: {
@@ -177,11 +193,90 @@ export default {
       } else {
         const accounts = await app.web3.eth.getAccounts();
         if (accounts.length > 0) {
-          app.balance = await app.web3.eth.getBalance(accounts[0]);
           app.account = accounts[0];
-          app.balance = parseFloat(
-            app.web3.utils.fromWei(app.balance, "ether")
-          ).toFixed(10);
+        }
+      }
+    },
+    async checkUserNft() {
+      const app = this;
+      console.log(app.email, app.isRequesting);
+      if (app.email.length > 0 && !app.isRequesting) {
+        app.isRequesting = true;
+        console.log("Init request");
+        try {
+          let claimableNfts = await axios.get(
+            process.env.VUE_APP_API_URL + "/claimable/" + app.email
+          );
+          console.log("Response is: ", claimableNfts.data[0]);
+          if (
+            claimableNfts.data[0] !== undefined &&
+            claimableNfts.data[0].claim !== undefined &&
+            claimableNfts.data[0].claim.length > 0
+          ) {
+            app.claim = claimableNfts.data[0].claim;
+            app.askRedeemCode();
+          } else {
+            alert("Nothing to claim, sorry!");
+          }
+        } catch (e) {
+          console.log("Check request failed", e);
+          app.isRequesting = false;
+        }
+      }
+    },
+    async askRedeemCode() {
+      console.log("init code request");
+      const app = this;
+      if (
+        app.isRequesting === true &&
+        app.claim !== undefined &&
+        app.claim.length > 0
+      ) {
+        console.log("claim event:", app.claim);
+        try {
+          let askRedeemCode = await axios.get(
+            process.env.VUE_APP_API_URL + "/ask/event/" + app.claim
+          );
+          console.log("I want code for redeem:", askRedeemCode.data);
+          console.log("message is:", askRedeemCode.data.message);
+          if (
+            askRedeemCode.data.message !== undefined &&
+            askRedeemCode.data.message === "Please verify your e-mail now."
+          ) {
+            app.step = 2;
+            app.existingCode = true;
+            console.log("I am on step", app.step);
+          } else {
+            alert("Request failed, retry please!");
+          }
+        } catch (e) {
+          console.log(e);
+          alert("Code request failed");
+          app.isRequesting = false;
+        }
+      }
+    },
+    async signForClaim() {
+      const app = this;
+      if (
+        app.account !== undefined &&
+        app.isRequesting === true &&
+        app.claim !== undefined &&
+        app.claim.length > 0 &&
+        app.existingCode !== undefined &&
+        app.existingCode.length > 0
+      ) {
+        console.log("init checking code");
+        try {
+          let checkCode = await axios.get(
+            process.env.VUE_APP_API_URL + "claim" + app.claim
+          );
+          console.log("I'm claming", checkCode);
+          app.step = 3;
+        } catch (e) {
+          console.log(e);
+          alert("Your code is invalid, check and retry!");
+          app.existingCode = false;
         }
       }
     },
