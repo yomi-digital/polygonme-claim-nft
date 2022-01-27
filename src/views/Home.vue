@@ -77,18 +77,16 @@
                 v-model="code"
               />
             </div>
-            <div class="col-12">
+            <div v-if="!account">
               <button
                 v-if="!account"
                 class="btn mt-4"
                 @click="connectMetamask()"
               >
-                Connect Wallet
-              </button>
-              <button v-if="account" class="btn mt-4" @click="signMessage()">
                 Sign Message
               </button>
             </div>
+            <div v-if="account">Claiming your nft, please wait...</div>
           </div>
         </div>
         <div v-if="step === 3">
@@ -123,6 +121,7 @@ export default {
       claim: "",
       code: "",
       account: "",
+      signature: "",
       existingCode: "",
       isRequesting: false,
       web3: "",
@@ -171,29 +170,45 @@ export default {
     },
     async connectMetamask() {
       const app = this;
-      const providerOptions = {
-        walletconnect: {
-          package: WalletConnectProvider,
-          options: {
-            infuraId: "insert_infura",
+      if (app.code.length > 0) {
+        app.isRequesting = false;
+        const providerOptions = {
+          walletconnect: {
+            package: WalletConnectProvider,
+            options: {
+              infuraId: "57d9ea9ca92a4449933c2b7d7145187d",
+            },
           },
-        },
-      };
-      // Instantiating Web3Modal
-      const web3Modal = new Web3Modal({
-        cacheProvider: true,
-        providerOptions: providerOptions,
-      });
-      const provider = await web3Modal.connect();
-      app.web3 = await new Web3(provider);
-      // Checking if networkId matches
-      const netId = await app.web3.eth.net.getId();
-      if (netId !== 1) {
-        alert("Switch to Ethereum Network!");
-      } else {
-        const accounts = await app.web3.eth.getAccounts();
-        if (accounts.length > 0) {
-          app.account = accounts[0];
+        };
+        // Instantiating Web3Modal
+        const web3Modal = new Web3Modal({
+          cacheProvider: true,
+          providerOptions: providerOptions,
+        });
+        const provider = await web3Modal.connect();
+        console.log("this is web3:", web3Modal);
+        app.web3 = await new Web3(provider);
+        // Checking if networkId matches
+        const netId = await app.web3.eth.net.getId();
+        if (netId !== 1) {
+          alert("Switch to Ethereum Network!");
+        } else {
+          const accounts = await app.web3.eth.getAccounts();
+          if (accounts.length > 0) {
+            app.account = accounts[0];
+            console.log("account is:", app.account);
+            try {
+              app.signature = await app.web3.eth.personal.sign(
+                app.code,
+                app.account
+              );
+
+              console.log("signature is:", app.signature);
+              app.claimNFT();
+            } catch (e) {
+              alert(e.message);
+            }
+          }
         }
       }
     },
@@ -256,27 +271,33 @@ export default {
         }
       }
     },
-    async signForClaim() {
+    async claimNFT() {
       const app = this;
+      console.log(app.account, app.isRequesting, app.signature);
       if (
         app.account !== undefined &&
-        app.isRequesting === true &&
-        app.claim !== undefined &&
-        app.claim.length > 0 &&
-        app.existingCode !== undefined &&
-        app.existingCode.length > 0
+        app.isRequesting === false &&
+        app.signature.length > 0
       ) {
-        console.log("init checking code");
         try {
-          let checkCode = await axios.get(
-            process.env.VUE_APP_API_URL + "claim" + app.claim
+          app.isRequesting = true;
+          console.log("now isRequesting is:", app.isRequesting);
+          let checkCode = await axios.post(
+            process.env.VUE_APP_API_URL + "/claim/" + app.claim,
+            { address: app.account, secret: app.code, signature: app.signature }
           );
-          console.log("I'm claming", checkCode);
+          setTimeout(
+            axios.get(process.env.VUE_APP_API_URL + "/run-daemon"),
+            200
+          );
+          console.log("I'm signing", checkCode.data);
+          app.isRequesting = false;
+          console.log("after checking code isRequesting is", app.isRequesting);
           app.step = 3;
         } catch (e) {
           console.log(e);
           alert("Your code is invalid, check and retry!");
-          app.existingCode = false;
+          app.isRequesting = false;
         }
       }
     },
