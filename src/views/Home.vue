@@ -59,7 +59,7 @@
               >
                 Request Code
               </button>
-              <div class="mt-4" v-if="isRequesting">
+              <div class="mt-4" v-if="isRequesting && claimableNFT">
                 <p>Requesting code please wait...</p>
                 <div class="spinner mt-1">
                   <i class="fas fa-spinner fa-pulse"></i>
@@ -82,16 +82,12 @@
                 v-model="code"
               />
             </div>
-            <div v-if="!account">
-              <button
-                v-if="!account"
-                class="btn mt-4"
-                @click="connectMetamask()"
-              >
+            <div v-if="claimableNFT">
+              <button class="btn mt-4" @click="connectMetamask()">
                 Sign Message
               </button>
             </div>
-            <div v-if="account">
+            <div v-if="isRequesting && !claimableNFT">
               <p>Claiming your nft, please wait...</p>
               <div class="spinner mt-1">
                 <i class="fas fa-spinner fa-pulse"></i>
@@ -139,6 +135,8 @@ export default {
       signature: "",
       existingCode: "",
       isRequesting: false,
+      isMetamask: false,
+      claimableNFT: false,
       web3: "",
       waitingForCode: "",
       networks: {
@@ -244,10 +242,13 @@ export default {
             claimableNfts.data[0].claim.length > 0
           ) {
             app.claim = claimableNfts.data[0].claim;
+            app.claimableNFT = true;
             app.askRedeemCode();
           } else {
-            alert("Nothing to claim, sorry!");
+            app.claimableNFT = false;
             app.isRequesting = false;
+            alert("Nothing to claim, sorry!");
+            console.log("requesting is:", app.isRequesting);
           }
         } catch (e) {
           console.log("You don't have any nft to claim!");
@@ -275,16 +276,17 @@ export default {
             askRedeemCode.data.message === "Please verify your e-mail now."
           ) {
             app.step = 2;
-            app.existingCode = true;
-            console.log("I am on step", app.step);
+            (app.claimableNFT = true), console.log("I am on step", app.step);
           } else {
             alert("Request Failed, please retry");
+            app.claimableNFT = false;
             app.isRequesting = false;
           }
         } catch (e) {
           console.log(e);
           alert("Code request failed");
           app.isRequesting = false;
+          app.claimableNFT = false;
         }
       }
     },
@@ -303,14 +305,18 @@ export default {
             process.env.VUE_APP_API_URL + "/claim/" + app.claim,
             { address: app.account, secret: app.code, signature: app.signature }
           );
-          setTimeout(
-            axios.get(process.env.VUE_APP_API_URL + "/run-daemon"),
-            200
-          );
           console.log("I'm signing", checkCode.data);
+          if (checkCode.data.error === undefined) {
+            app.step = 3;
+            setTimeout(
+              axios.get(process.env.VUE_APP_API_URL + "/run-daemon"),
+              200
+            );
+          } else {
+            alert(checkCode.data.error);
+            app.step = 1;
+          }
           app.isRequesting = false;
-          console.log("after checking code isRequesting is", app.isRequesting);
-          app.step = 3;
         } catch (e) {
           console.log(e);
           alert("Your code is invalid, check and retry!");
