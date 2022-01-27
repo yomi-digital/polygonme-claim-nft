@@ -59,7 +59,12 @@
               >
                 Request Code
               </button>
-              <span v-if="isRequesting">Requesting code please wait...</span>
+              <div class="mt-4" v-if="isRequesting">
+                <p>Requesting code please wait...</p>
+                <div class="spinner mt-1">
+                  <i class="fas fa-spinner fa-pulse"></i>
+                </div>
+              </div>
             </div>
           </div>
         </div>
@@ -86,11 +91,21 @@
                 Sign Message
               </button>
             </div>
-            <div v-if="account">Claiming your nft, please wait...</div>
+            <div v-if="account">
+              <p>Claiming your nft, please wait...</p>
+              <div class="spinner mt-1">
+                <i class="fas fa-spinner fa-pulse"></i>
+              </div>
+            </div>
           </div>
         </div>
         <div v-if="step === 3">
-          <h3>Congratulation, you will receive your NFT soon!</h3>
+          <h3>
+            Congratulation, you will receive your NFT soon! <br />
+            Go to
+            <a href="https://opensea.io/" target="_blank">opensea.io</a> and
+            check in "hidden" section of your account page.
+          </h3>
         </div>
       </div>
     </section>
@@ -232,9 +247,10 @@ export default {
             app.askRedeemCode();
           } else {
             alert("Nothing to claim, sorry!");
+            app.isRequesting = false;
           }
         } catch (e) {
-          console.log("Check request failed", e);
+          console.log("You don't have any nft to claim!");
           app.isRequesting = false;
         }
       }
@@ -262,7 +278,8 @@ export default {
             app.existingCode = true;
             console.log("I am on step", app.step);
           } else {
-            alert("Request failed, retry please!");
+            alert("Request Failed, please retry");
+            app.isRequesting = false;
           }
         } catch (e) {
           console.log(e);
