@@ -70,7 +70,7 @@
         </div>
         <div v-if="step === 2">
           <div class="row needs-validation justify-content-center" required>
-            <div class="col-md-4 position-relative">
+            <div v-if="!isSigning" class="col-md-4 position-relative">
               <label for="validationTooltip05" class="form-label"
                 >Insert the code that you have received via mail</label
               >
@@ -82,7 +82,7 @@
                 v-model="code"
               />
             </div>
-            <div v-if="claimableNFT">
+            <div v-if="claimableNFT && !isSigning">
               <button class="btn mt-4" @click="connectMetamask()">
                 Sign Message
               </button>
@@ -92,6 +92,9 @@
               <div class="spinner mt-1">
                 <i class="fas fa-spinner fa-pulse"></i>
               </div>
+            </div>
+            <div v-if="isSigning && claimableNFT">
+              <h3>Please sign to metamask</h3>
             </div>
           </div>
         </div>
@@ -136,6 +139,7 @@ export default {
       existingCode: "",
       isRequesting: false,
       isMetamask: false,
+      isSigning: false,
       claimableNFT: false,
       web3: "",
       waitingForCode: "",
@@ -210,6 +214,7 @@ export default {
           if (accounts.length > 0) {
             app.account = accounts[0];
             console.log("account is:", app.account);
+            app.isSigning = true;
             try {
               app.signature = await app.web3.eth.personal.sign(
                 app.code,
@@ -300,6 +305,7 @@ export default {
       ) {
         try {
           app.isRequesting = true;
+          console.log("I starting to sign:", app.isSigning);
           console.log("now isRequesting is:", app.isRequesting);
           let checkCode = await axios.post(
             process.env.VUE_APP_API_URL + "/claim/" + app.claim,
@@ -314,6 +320,7 @@ export default {
             );
           } else {
             alert(checkCode.data.error);
+            app.isSigning = false;
             app.step = 1;
           }
           app.isRequesting = false;
@@ -321,6 +328,7 @@ export default {
           console.log(e);
           alert("Your code is invalid, check and retry!");
           app.isRequesting = false;
+          app.isSigning = false;
         }
       }
     },
