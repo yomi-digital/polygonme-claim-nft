@@ -24,7 +24,7 @@
             </h3>
             <p>
               <em>If you don't have Metamask follow this </em>
-              <a href="" target="_blank"><em>guide</em></a>
+              <a href="/metamask_guide.pdf" target="_blank"><em>guide</em></a>
             </p>
           </div>
         </div>
