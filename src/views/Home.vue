@@ -23,6 +23,14 @@
               received via email and sign the transaction with Metamask.
             </h3>
             <p>
+              <em
+                >Follow this
+                <a href="/aicl_guidebook.pdf" target="_blank">Guidebook</a>
+                which contains instructions on how to get the certificates after
+                setting up metamask</em
+              >
+            </p>
+            <p>
               <em>If you don't have Metamask follow this </em>
               <a href="/metamask_guide.pdf" target="_blank"><em>guide</em></a>
             </p>
